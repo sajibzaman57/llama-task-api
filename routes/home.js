@@ -1,3 +1,5 @@
+// routes/home.js
+
 module.exports = function (router) {
 
     var homeRoute = router.route('/');
