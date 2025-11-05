@@ -7,13 +7,13 @@ function handleMongooseError(err, res) {
 
         res.status(400).json({
             message: 'Bad Request',
-            error: err.message || 'Invalid input or query parameters'
+            data: err.message || 'Invalid input or query parameters'
         });
     } else {
 
         res.status(500).json({
             message: 'Internal Server Error',
-            error: err.message || 'Something went wrong on the server'
+            data: err.message || 'Something went wrong on the server'
         });
     }
 }
