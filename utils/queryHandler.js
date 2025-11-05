@@ -4,7 +4,7 @@ function buildQueryParams(req) {
 
     if (req.query.where) {
         const parsedFilter = JSON.parse(req.query.where);
-        Object.assign(query, parsedFilter); // ✅ FIX: flatten into query
+        Object.assign(query, { filter: parsedFilter }); // ✅ FIX: flatten into query
     }
 
     if (req.query.sort) options.sort = JSON.parse(req.query.sort);

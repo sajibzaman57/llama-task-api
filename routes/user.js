@@ -3,26 +3,30 @@ const express = require('express');
 const User = require('../models/user');
 const Task = require('../models/task');
 const buildQueryParams = require('../utils/queryHandler');
+const handleMongooseError = require('../utils/errorHandler');
 const router = express.Router();
+
 
 // GET all users with query support
 router.get('/', async (req, res) => {
     try {
         const { query, options } = buildQueryParams(req);
+        console.log("🧠 Parsed query:", query.filter, "Options:", options);
 
         if (options.count) {
-            const count = await User.countDocuments(query || {});
+            const count = await User.countDocuments(query.filter || {});
             return res.status(200).json({ message: 'User count retrieved', data: count });
         }
 
-        const users = await User.find(query || {}, options.select)
+        const users = await User.find(query.filter || {}, options.select)
             .sort(options.sort)
             .skip(options.skip || 0)
             .limit(options.limit || 0);
 
+        console.log("✅ Fetched users:", users.length);
         res.status(200).json({ message: 'OK', data: users });
     } catch (err) {
-        res.status(400).json({ message: 'Error retrieving users', error: err.message });
+        handleMongooseError(err, res);
     }
 });
 
@@ -30,11 +34,12 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { query, options } = buildQueryParams(req);
+        console.log("🧠 Parsed query:", query.filter, "Options:", options);
         const user = await User.findById(req.params.id, options.select);
         if (!user) return res.status(404).json({ message: 'User not found', data: null });
         res.status(200).json({ message: 'OK', data: user });
     } catch (err) {
-        res.status(400).json({ message: 'Invalid user ID', error: err.message });
+        handleMongooseError(err, res);
     }
 });
 
@@ -42,10 +47,10 @@ router.get('/:id', async (req, res) => {
 router.post("/", async (req, res) => {
     try {
         const { name, email, pendingTasks = [] } = req.body;
-        if (!name || !email) throw new Error("Name and email are required");
+        if (!name || !email) return res.status(400).json({ message: "Name and email are required", data: null });
 
         const existing = await User.findOne({ email });
-        if (existing) throw new Error("Email already exists");
+        if (existing) return res.status(400).json({ message: "Email already exists", data: null });
 
         const newUser = new User({
             name,
@@ -56,8 +61,8 @@ router.post("/", async (req, res) => {
 
         const savedUser = await newUser.save();
         res.status(201).json({ message: "User created", data: savedUser });
-    } catch (error) {
-        res.status(400).json({ message: "Error creating user", error: error.message });
+    } catch (err) {
+        handleMongooseError(err, res);
     }
 });
 
@@ -65,7 +70,7 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
     try {
         const { name, email, pendingTasks = [] } = req.body;
-        if (!name || !email) throw new Error("Name and email are required");
+        if (!name || !email) return res.status(400).json({ message: "Name and email are required", data: null });
 
         const updatedUser = await User.findByIdAndUpdate(
             req.params.id,
@@ -83,7 +88,7 @@ router.put("/:id", async (req, res) => {
 
         res.status(200).json({ message: 'User updated', data: updatedUser });
     } catch (err) {
-        res.status(400).json({ message: 'Error updating user', error: err.message });
+        handleMongooseError(err, res);
     }
 });
 
@@ -98,9 +103,9 @@ router.delete("/:id", async (req, res) => {
             { assignedUser: '', assignedUserName: 'unassigned' }
         );
 
-        res.status(200).json({ message: 'User deleted and tasks unassigned', data: deletedUser });
+        res.status(204).send();
     } catch (err) {
-        res.status(400).json({ message: 'Error deleting user', error: err.message });
+        handleMongooseError(err, res);
     }
 });
 

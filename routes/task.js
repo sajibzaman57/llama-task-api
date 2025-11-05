@@ -5,6 +5,7 @@ const router = express.Router();
 const Task = require('../models/task');
 const User = require('../models/user');
 const buildQueryParams = require('../utils/queryHandler');
+const handleMongooseError = require('../utils/errorHandler');
 
 // GET all tasks with query support
 router.get('/', async (req, res) => {
@@ -12,7 +13,7 @@ router.get('/', async (req, res) => {
         console.log("🔍 Incoming request to GET /api/tasks", req.query);
 
         const { query, options } = buildQueryParams(req);
-        console.log("🧠 Parsed query:", query, "Options:", options);
+        console.log("🧠 Parsed query:", query.filter, "Options:", options);
 
         if (options.count) {
             const count = await Task.countDocuments(query.filter || {});
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
         res.status(200).json({ message: 'OK', data: tasks });
     } catch (err) {
         console.error("❌ Error in GET /api/tasks:", err);
-        res.status(400).json({ message: 'Error retrieving tasks', error: err.message });
+        handleMongooseError(err, res);
     }
 });
 
@@ -36,11 +37,12 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { query, options } = buildQueryParams(req);
+        console.log("🧠 Parsed query:", query.filter, "Options:", options);
         const task = await Task.findById(req.params.id, options.select);
         if (!task) return res.status(404).json({ message: 'Task not found', data: null });
         res.status(200).json({ message: 'OK', data: task });
     } catch (err) {
-        res.status(400).json({ message: 'Invalid task ID', error: err.message });
+        handleMongooseError(err, res);
     }
 });
 
@@ -48,7 +50,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const { name, description = '', deadline, completed = false, assignedUser = '', assignedUserName = 'unassigned' } = req.body;
-        if (!name || !deadline) throw new Error("Name and deadline are required");
+        if (!name || !deadline) return res.status(400).json({ message: "Name and deadline are required", data: null });
 
         const newTask = new Task({
             name,
@@ -72,7 +74,7 @@ router.post('/', async (req, res) => {
 
         res.status(201).json({ message: 'Task created', data: savedTask });
     } catch (err) {
-        res.status(400).json({ message: 'Error creating task', error: err.message });
+        handleMongooseError(err, res);
     }
 });
 
@@ -83,7 +85,7 @@ router.put('/:id', async (req, res) => {
         if (!task) return res.status(404).json({ message: 'Task not found', data: null });
 
         const { name, description, deadline, completed, assignedUser, assignedUserName } = req.body;
-        if (!name || !deadline) throw new Error("Name and deadline are required");
+        if (!name || !deadline) return res.status(400).json({ message: "Name and deadline are required", data: null });
 
         // Remove from previous user's pendingTasks if applicable
         if (task.assignedUser && task.assignedUser !== assignedUser) {
@@ -112,7 +114,7 @@ router.put('/:id', async (req, res) => {
 
         res.status(200).json({ message: 'Task updated', data: task });
     } catch (err) {
-        res.status(400).json({ message: 'Error updating task', error: err.message });
+        handleMongooseError(err, res);
     }
 });
 
@@ -130,9 +132,9 @@ router.delete('/:id', async (req, res) => {
             );
         }
 
-        res.status(200).json({ message: 'Task deleted and user updated', data: task });
+        res.status(204).send();
     } catch (err) {
-        res.status(400).json({ message: 'Error deleting task', error: err.message });
+        handleMongooseError(err, res);
     }
 });
 
