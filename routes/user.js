@@ -11,11 +11,11 @@ router.get('/', async (req, res) => {
         const { query, options } = buildQueryParams(req);
 
         if (options.count) {
-            const count = await User.countDocuments(query.filter || {});
+            const count = await User.countDocuments(query || {});
             return res.status(200).json({ message: 'User count retrieved', data: count });
         }
 
-        const users = await User.find(query.filter || {}, options.select)
+        const users = await User.find(query || {}, options.select)
             .sort(options.sort)
             .skip(options.skip || 0)
             .limit(options.limit || 0);
